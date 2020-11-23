@@ -9,8 +9,11 @@
         <script src="{{asset('js/app.js')}}" defer></script>
     </head>
     <body class="bg-blue-300">
-        <div id="app" class="flex justify-center pt-16 ">
+        <div id="app" class="flex justify-center pt-8 ">
             <weather-app></weather-app>
+        </div>
+        <div class="footer flex justify-center">
+            <p class="font-semibold underline">Powered By <a href="#"><span class="text-blue-700">Pixel</span><span class="text-orange-500">Code</span></a></p>
         </div>
     </body>
 </html>
