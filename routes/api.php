@@ -21,9 +21,15 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 
 Route::get('/weather', function () {
     $apiKey = config('services.weatherapi.key');
-    $city   = request('city', 'Ismailia');
-
-    $response = Http::get("https://api.weatherapi.com/v1/forecast.json?key=$apiKey&q=$city&days=7");
-
+    $city   = Request('city');
+   
+    $response = Http::get("https://api.weatherapi.com/v1/forecast.json?key=$apiKey&q=$city&days=5");
+    
     return $response->json();
 });
+
+Route::get('/getcityfromip', function () {
+    $response = Http::get("http://ip-api.com/json");
+    return $response->json();
+});
+

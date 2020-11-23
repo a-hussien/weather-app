@@ -1959,44 +1959,101 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   mounted: function mounted() {
-    this.fetchData();
+    var _this = this;
+
+    // fetch city name from user ip
+    this.fetchcity(); // fetch weather data from waether API
+
+    this.fetchData(); // Auto complete palaces by algolia
+
+    var placesAutocomplete = places({
+      appId: 'plKH5JUYIVUD',
+      apiKey: '27087fee470928a85376f37a8c398335',
+      container: document.querySelector('#city'),
+      templates: {
+        value: function value(suggestion) {
+          return suggestion.name;
+        }
+      }
+    }).configure({
+      type: 'city',
+      aroundLatLngViaIP: false
+    });
+    var $address = document.querySelector('#city');
+    placesAutocomplete.on('change', function (e) {
+      _this.location.name = e.suggestion.name;
+      _this.location.country = e.suggestion.country;
+    });
+    placesAutocomplete.on('clear', function () {
+      $address.textContent = 'none';
+    });
+  },
+  watch: {
+    // add watcher on place changes
+    location: {
+      handler: function handler(newValue, oldValue) {
+        this.fetchData();
+      },
+      deep: true
+    }
   },
   data: function data() {
     return {
+      location: {
+        name: '',
+        country: ''
+      },
       currentTemperature: {
         actual: '',
         feels: '',
         summary: '',
-        icon: ''
+        icon: '',
+        isDay: 1
       },
-      daily: [],
-      location: {
-        name: '',
-        country: ''
-      }
+      daily: []
     };
   },
   methods: {
+    fetchcity: function fetchcity() {
+      var _this2 = this;
+
+      fetch('/api/getcityfromip').then(function (response) {
+        return response.json();
+      }).then(function (data) {
+        _this2.location.name = data.city;
+        _this2.location.country = data.country;
+      });
+    },
     dayOfWeek: function dayOfWeek(timestamp) {
       var newDate = new Date(timestamp * 1000);
       var days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
       return days[newDate.getDay()];
     },
+    shortDate: function shortDate(dateTime) {
+      var newDate = new Date(dateTime);
+      var d = newDate.getDate();
+      var m = newDate.getMonth() + 1;
+      return "".concat(d + '-' + m);
+    },
     fetchData: function fetchData() {
-      var _this = this;
+      var _this3 = this;
 
-      fetch('/api/weather').then(function (response) {
+      fetch("/api/weather?city=".concat(this.location.name)).then(function (response) {
         return response.json();
       }).then(function (data) {
-        _this.location.name = data.location.name;
-        _this.location.country = data.location.country;
-        _this.currentTemperature.actual = data.current.temp_c;
-        _this.currentTemperature.feels = data.current.feelslike_c;
-        _this.currentTemperature.summary = data.current.condition.text;
-        _this.currentTemperature.icon = data.current.condition.icon;
-        _this.daily = data.forecast.forecastday;
+        _this3.location.name = data.location.name;
+        _this3.location.country = data.location.country;
+        _this3.currentTemperature.actual = Math.round(data.current.temp_c);
+        _this3.currentTemperature.feels = data.current.feelslike_c;
+        _this3.currentTemperature.summary = data.current.condition.text;
+        _this3.currentTemperature.icon = data.current.condition.icon;
+        _this3.currentTemperature.isDay = data.current.is_day;
+        _this3.daily = data.forecast.forecastday;
       });
     }
   }
@@ -37663,7 +37720,12 @@ var render = function() {
               },
               [
                 _c("div", { staticClass: "w-1/6 text-lg text-gray-200" }, [
-                  _vm._v(_vm._s(_vm.dayOfWeek(day.date_epoch)))
+                  _vm._v(
+                    "\n                    " +
+                      _vm._s(_vm.dayOfWeek(day.date_epoch)) +
+                      "\n                    "
+                  ),
+                  _c("p", [_vm._v(" " + _vm._s(_vm.shortDate(day.date)) + " ")])
                 ]),
                 _vm._v(" "),
                 _c("div", { staticClass: "w-4/6 px-4 flex items-center" }, [
@@ -37677,9 +37739,13 @@ var render = function() {
                 ]),
                 _vm._v(" "),
                 _c("div", { staticClass: "w-1/6 text-right" }, [
-                  _c("div", [_vm._v(_vm._s(day.day.mintemp_c) + "°C ")]),
+                  _c("div", [
+                    _vm._v(_vm._s(Math.round(day.day.mintemp_c)) + "°C ")
+                  ]),
                   _vm._v(" "),
-                  _c("div", [_vm._v(_vm._s(day.day.maxtemp_c) + "°C ")])
+                  _c("div", [
+                    _vm._v(_vm._s(Math.round(day.day.maxtemp_c)) + "°C ")
+                  ])
                 ])
               ]
             )
@@ -37701,7 +37767,11 @@ var staticRenderFns = [
       [
         _c("input", {
           staticClass: "w-full",
-          attrs: { type: "text", name: "place", id: "place" }
+          attrs: {
+            type: "search",
+            id: "city",
+            placeholder: "In which city do you live?"
+          }
         })
       ]
     )

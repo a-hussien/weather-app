@@ -3,7 +3,7 @@
     <div class="text-white mb-8">
         <!-- weather-places -->
         <div class="places-input text-gray-800 cursor-pointer">
-            <input type="text" class="w-full" name="place" id="place">
+            <input type="search" id="city" class="w-full" placeholder="In which city do you live?" />
         </div><!-- end weather-places -->
         
         <!-- weather-container -->
@@ -28,7 +28,10 @@
             <!-- future-weather -->
             <div class="future-weather text-sm bg-gray-800 px-6 py-8 overflow-hidden font-semibold">
                 <div v-for="(day, index) in daily" :key="index.date_epoch" class="flex items-center" :class="{'mt-8' : index > 0}">
-                    <div class="w-1/6 text-lg text-gray-200">{{dayOfWeek(day.date_epoch)}}</div>
+                    <div class="w-1/6 text-lg text-gray-200">
+                        {{dayOfWeek(day.date_epoch)}}
+                        <p> {{shortDate(day.date)}} </p>
+                    </div>
                     <div class="w-4/6 px-4 flex items-center">
                         <div>
                             <img :src="day.day.condition.icon">
@@ -36,8 +39,8 @@
                         <div class="ml-3">{{day.day.condition.text}}</div>
                     </div>
                     <div class="w-1/6 text-right">
-                        <div>{{day.day.mintemp_c}}°C </div>
-                        <div>{{day.day.maxtemp_c}}°C </div>
+                        <div>{{Math.round(day.day.mintemp_c)}}°C </div>
+                        <div>{{Math.round(day.day.maxtemp_c)}}°C </div>
                     </div>
                 </div>
                 
@@ -52,44 +55,99 @@
 <script>
     export default {
         mounted() {
+            // fetch city name from user ip
+            this.fetchcity();
+            // fetch weather data from waether API
             this.fetchData();
+            // Auto complete palaces by algolia
+            var placesAutocomplete = places({
+                appId: 'plKH5JUYIVUD',
+                apiKey: '27087fee470928a85376f37a8c398335',
+                container: document.querySelector('#city'),
+                templates: {
+                value: function(suggestion) {
+                    return suggestion.name;
+                    }
+                },
+            }).configure({
+                type: 'city',
+                aroundLatLngViaIP: false,
+            });
+
+            var $address = document.querySelector('#city')
+            placesAutocomplete.on('change', (e) => {
+                this.location.name = e.suggestion.name
+                this.location.country = e.suggestion.country
+            });
+
+            placesAutocomplete.on('clear', function() {
+                $address.textContent = 'none';
+            });
+            
+        },
+        watch: {
+            // add watcher on place changes
+            location:{
+                handler(newValue, oldValue){
+                    this.fetchData()
+                },
+                deep: true
+            }
         },
         data() {
             return {
+                location: {
+                    name: '',
+                    country: '',
+                },
                 currentTemperature: {
                     actual: '',
                     feels: '',
                     summary: '',
                     icon : '',
+                    isDay: 1,
                 },
-                daily: [],
-                location: {
-                    name: '',
-                    country: '',
-                }
+                daily: []
             }
         },
         methods: {
+            fetchcity() {
+                fetch('/api/getcityfromip')
+                .then(response=>response.json())
+                .then(data => {
+                    this.location.name = data.city
+                    this.location.country = data.country
+                })
+            },
 
             dayOfWeek(timestamp) {
-                const newDate = new Date(timestamp*1000);
-                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-                return days[newDate.getDay()];
-                
+                const newDate = new Date(timestamp*1000)
+                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                return days[newDate.getDay()]
+
+            },
+
+            shortDate(dateTime) {
+                const newDate = new Date(dateTime);
+                const d = newDate.getDate()
+                const m = newDate.getMonth() + 1
+                return `${d + '-' + m}`
+
             },
 
             fetchData() {
-                fetch('/api/weather')
+
+                fetch(`/api/weather?city=${this.location.name}`)
                 .then(response=>response.json())
                 .then(data=> {
                     this.location.name = data.location.name
                     this.location.country = data.location.country
-                    this.currentTemperature.actual = data.current.temp_c
+                    this.currentTemperature.actual = Math.round(data.current.temp_c)
                     this.currentTemperature.feels = data.current.feelslike_c
                     this.currentTemperature.summary = data.current.condition.text
                     this.currentTemperature.icon = data.current.condition.icon
+                    this.currentTemperature.isDay = data.current.is_day
                     this.daily = data.forecast.forecastday
-
                 })
             }
             
