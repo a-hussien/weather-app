@@ -34,4 +34,9 @@ return [
         'key' => env('WEATHER_API_KEY'),
     ],
 
+    'userinfo' => [
+        'key' => env('USER_API_KEY'),
+    ],
+    
+
 ];
